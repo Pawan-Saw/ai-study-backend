@@ -1,5 +1,7 @@
 package ai_study_backend.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,8 @@ public class GeminiController {
     private final WebClient webClient = WebClient.builder()
             .codecs(config -> config.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
             .build();
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostMapping("/ask")
     public Mono<String> ask(@RequestBody Map<String, String> body) {
@@ -51,10 +55,27 @@ public class GeminiController {
                     })
             )
             .bodyToMono(String.class)
-            .map(response -> response.replaceAll("[\\p{Cntrl}&&[^\n\r\t]]", "")) // ✅ Clean
+            .map(response -> {
+                try {
+                    // ✅ Backend me hi text extract karo
+                    JsonNode root = objectMapper.readTree(response);
+                    String text = root.path("candidates")
+                        .get(0)
+                        .path("content")
+                        .path("parts")
+                        .get(0)
+                        .path("text")
+                        .asText();
+                    System.out.println("Gemini text extracted: " + text.substring(0, Math.min(50, text.length())));
+                    return text; // ✅ Sirf plain text return karo
+                } catch (Exception e) {
+                    System.out.println("Parse error: " + e.getMessage());
+                    return "Sorry, could not get response";
+                }
+            })
             .onErrorResume(e -> {
                 System.out.println("Gemini Exception: " + e.getMessage());
-                return Mono.just("{\"error\": \"" + e.getMessage() + "\"}");
+                return Mono.just("Sorry, AI error occurred");
             });
     }
 }
