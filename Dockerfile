@@ -1,19 +1,17 @@
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
 
-# Pehle dependencies copy karo (caching ke liye)
-COPY pom.xml .
-COPY mvnw .
-COPY .mvn .mvn
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
 
-# Source code copy karo
-COPY src src
-
-# Build karo
 RUN chmod +x mvnw
+RUN ./mvnw dependency:resolve
+
+COPY src ./src
+
 RUN ./mvnw clean package -DskipTests
 
-# JAR run karo
 EXPOSE 8080
-CMD ["sh", "-c", "java -jar target/*.jar"]
+
+ENTRYPOINT ["java", "-jar", "target/ai-study-backend-0.0.1-SNAPSHOT.jar"]
