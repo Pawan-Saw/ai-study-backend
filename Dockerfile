@@ -1,15 +1,19 @@
-# Use official Java image
 FROM eclipse-temurin:21-jdk
 
-# Set working directory
 WORKDIR /app
 
-# Copy all files
-COPY . .
+# Pehle dependencies copy karo (caching ke liye)
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
 
-# Build the project
+# Source code copy karo
+COPY src src
+
+# Build karo
 RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
-# Run the jar file
-CMD ["java", "-jar", "target/*.jar"]
+# JAR run karo
+EXPOSE 8080
+CMD ["sh", "-c", "java -jar target/*.jar"]
