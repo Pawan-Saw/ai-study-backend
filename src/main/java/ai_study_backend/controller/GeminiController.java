@@ -13,7 +13,7 @@ import java.util.List;
 @CrossOrigin(origins = {
     "https://ai-planner-pawan-dev.netlify.app",
     "http://localhost:5173"
-}) // ✅ Fixed
+})
 public class GeminiController {
 
     @Value("${gemini.api.key}")
@@ -27,7 +27,6 @@ public class GeminiController {
     public Mono<String> ask(@RequestBody Map<String, String> body) {
         String prompt = body.get("prompt");
 
-        // ✅ gemini-2.0-flash — stable model
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> requestBody = Map.of(
@@ -47,13 +46,14 @@ public class GeminiController {
                 status -> status.is4xxClientError() || status.is5xxServerError(),
                 response -> response.bodyToMono(String.class)
                     .flatMap(errorBody -> {
-                        System.out.println("Gemini API Error: " + errorBody); // ✅ Log karega
+                        System.out.println("Gemini API Error: " + errorBody);
                         return Mono.error(new RuntimeException("Gemini Error: " + errorBody));
                     })
             )
             .bodyToMono(String.class)
+            .map(response -> response.replaceAll("[\\p{Cntrl}&&[^\n\r\t]]", "")) // ✅ Clean
             .onErrorResume(e -> {
-                System.out.println("Gemini Exception: " + e.getMessage()); // ✅ Log karega
+                System.out.println("Gemini Exception: " + e.getMessage());
                 return Mono.just("{\"error\": \"" + e.getMessage() + "\"}");
             });
     }
