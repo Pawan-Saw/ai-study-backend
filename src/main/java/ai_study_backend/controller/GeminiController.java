@@ -10,7 +10,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin
+@CrossOrigin(origins = {
+    "https://ai-planner-pawan-dev.netlify.app",
+    "http://localhost:5173"
+}) // ✅ Fixed
 public class GeminiController {
 
     @Value("${gemini.api.key}")
@@ -24,7 +27,8 @@ public class GeminiController {
     public Mono<String> ask(@RequestBody Map<String, String> body) {
         String prompt = body.get("prompt");
 
-       String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+        // ✅ gemini-2.0-flash — stable model
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> requestBody = Map.of(
             "contents", List.of(
@@ -42,9 +46,15 @@ public class GeminiController {
             .onStatus(
                 status -> status.is4xxClientError() || status.is5xxServerError(),
                 response -> response.bodyToMono(String.class)
-                    .flatMap(errorBody -> Mono.error(new RuntimeException("Gemini Error: " + errorBody)))
+                    .flatMap(errorBody -> {
+                        System.out.println("Gemini API Error: " + errorBody); // ✅ Log karega
+                        return Mono.error(new RuntimeException("Gemini Error: " + errorBody));
+                    })
             )
             .bodyToMono(String.class)
-            .onErrorResume(e -> Mono.just("Error: " + e.getMessage()));
+            .onErrorResume(e -> {
+                System.out.println("Gemini Exception: " + e.getMessage()); // ✅ Log karega
+                return Mono.just("{\"error\": \"" + e.getMessage() + "\"}");
+            });
     }
 }
